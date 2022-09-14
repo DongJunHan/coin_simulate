@@ -11,6 +11,7 @@ import math
 import platform
 from datetime import datetime, timedelta
 import unittest
+from multiprocessing import Process, Queue, Pool
 
 # profile
 enable_profile = True
@@ -241,6 +242,40 @@ class Util():
                 dic[df["datetime"][i]] = [df["close"][i]]
         result_df = result_df.from_dict(dic, orient="index", columns=["close"])
         return result_df
+    def basic(self):
+        df = pandas.read_csv("../sample_raw_data_2years2month.csv")
+        df['datetime'] = df['datetime'].map(pandas.Timestamp)
+        df.index = df['datetime'].values
+
+        df['delim_1m'] = numpy.select(
+                [(df['datetime'] - datetime(2000, 1, 1, 0, 0, 0))
+                    .dt.total_seconds().astype(int) % (60 * 1) == 0, ],
+                [1], 0)
+        df['delim_5m'] = numpy.select(
+                [(df['datetime'] - datetime(2000, 1, 1, 0, 0, 0))
+                    .dt.total_seconds().astype(int) % (60 * 5) == 0, ],
+                [1], 0)
+        df['delim_15m'] = numpy.select(
+                [(df['datetime'] - datetime(2000, 1, 1, 0, 0, 0))
+                    .dt.total_seconds().astype(int) % (60 * 15) == 0, ],
+                [1], 0)
+        df['delim_30m'] = numpy.select(
+                [(df['datetime'] - datetime(2000, 1, 1, 0, 0, 0))
+                    .dt.total_seconds().astype(int) % (60 * 30) == 0, ],
+                [1], 0)
+        df['delim_1h'] = numpy.select(
+                [(df['datetime'] - datetime(2000, 1, 1, 0, 0, 0))
+                    .dt.total_seconds().astype(int) % (60 * 60 * 1) == 0, ],
+                [1], 0)
+        df['delim_1d'] = numpy.select(
+                [(df['datetime'] - datetime(2000, 1, 1, 9, 0, 0))
+                    .dt.total_seconds().astype(int) % (60 * 60 * 24) == 0, ],
+                [1], 0)
+
+        pandas.set_option('display.max_rows', None)
+        pandas.set_option('display.max_columns', None)
+        pandas.set_option('display.width', None)
+        return df
 class search_coin():
     """ 
         코인의 정보를 가지고 오는 클래스.
@@ -606,70 +641,37 @@ class BollingerBand():
                bollinger_lbb[lbbKey] = float(lbbData)
         return ubb,lbb,bollinger_ubb,bollinger_lbb
 class TestMacd(unittest.TestCase):
-    @profile()
-    def test_example(self):
-        df = pandas.read_csv("../sample_raw_data_2years2month.csv")
-        df['datetime'] = df['datetime'].map(pandas.Timestamp)
-        df.index = df['datetime'].values
-        macd = Macd()
 
+    # @profile()
+    def TestMacd_get_macdsignal(self, df:pandas.DataFrame):
+        macd = Macd()
+        #1m
+        macd_df, macd_dict = macd.get_macd(df)
+        signal_df, signal_dict = macd.get_macd_signal(macd_df)
+        return signal_df, signal_dict
+    def test_example(self):
+        util = Util()
+        df = util.basic()
         count = len(df)
 
-        df['delim_1m'] = numpy.select(
-                [(df['datetime'] - datetime(2000, 1, 1, 0, 0, 0))
-                    .dt.total_seconds().astype(int) % (60 * 1) == 0, ],
-                [1], 0)
-        df['delim_5m'] = numpy.select(
-                [(df['datetime'] - datetime(2000, 1, 1, 0, 0, 0))
-                    .dt.total_seconds().astype(int) % (60 * 5) == 0, ],
-                [1], 0)
-        df['delim_15m'] = numpy.select(
-                [(df['datetime'] - datetime(2000, 1, 1, 0, 0, 0))
-                    .dt.total_seconds().astype(int) % (60 * 15) == 0, ],
-                [1], 0)
-        df['delim_30m'] = numpy.select(
-                [(df['datetime'] - datetime(2000, 1, 1, 0, 0, 0))
-                    .dt.total_seconds().astype(int) % (60 * 30) == 0, ],
-                [1], 0)
-        df['delim_1h'] = numpy.select(
-                [(df['datetime'] - datetime(2000, 1, 1, 0, 0, 0))
-                    .dt.total_seconds().astype(int) % (60 * 60 * 1) == 0, ],
-                [1], 0)
-        df['delim_1d'] = numpy.select(
-                [(df['datetime'] - datetime(2000, 1, 1, 9, 0, 0))
-                    .dt.total_seconds().astype(int) % (60 * 60 * 24) == 0, ],
-                [1], 0)
-
-        pandas.set_option('display.max_rows', None)
-        pandas.set_option('display.max_columns', None)
-        pandas.set_option('display.width', None)
-        util = Util()
         df_5m = util.convert_dataframe_from_1m(df, "delim_5m")
         df_15m = util.convert_dataframe_from_1m(df, "delim_15m")
         df_30m = util.convert_dataframe_from_1m(df, "delim_30m")
         df_1h = util.convert_dataframe_from_1m(df, "delim_1h")
         df_1d = util.convert_dataframe_from_1m(df, "delim_1d")
-    #     # with open("all.csv", "w") as f:
-    #         # print(df.to_csv(), file = f)
         start = datetime.now()
         #1m
-        macd_df, macd_dict = macd.get_macd(df)
-        macd.get_macd_signal(macd_df)
+        self.TestMacd_get_macdsignal(df)
         #5m
-        macd_df_5m, macd_dict = macd.get_macd(df_5m)
-        macd.get_macd_signal(macd_df_5m)
+        self.TestMacd_get_macdsignal(df_5m)
         #15m
-        macd_df_15m, macd_dict = macd.get_macd(df_15m)
-        macd.get_macd_signal(macd_df_15m)
+        self.TestMacd_get_macdsignal(df_15m)
         #30m
-        macd_df_30m, macd_dict = macd.get_macd(df_30m)
-        macd.get_macd_signal(macd_df_30m)
+        self.TestMacd_get_macdsignal(df_30m)
         #1h
-        macd_df_1h, macd_dict = macd.get_macd(df_1h)
-        macd.get_macd_signal(macd_df_1h)
+        self.TestMacd_get_macdsignal(df_1h)
         #1d
-        macd_df_1d, macd_dict = macd.get_macd(df_1d)
-        macd.get_macd_signal(macd_df_1d)
+        self.TestMacd_get_macdsignal(df_1d)
 
 
         end = datetime.now()
@@ -680,3 +682,60 @@ class TestMacd(unittest.TestCase):
         print(f"speed        : {speed: 12.2f}")
         print()
         print()
+
+
+def TestMacd_get_macdsignal(df:pandas.DataFrame):
+    macd = Macd()
+    #1m
+    macd_df, macd_dict = macd.get_macd(df)
+    signal_df, signal_dict = macd.get_macd_signal(macd_df)
+    return signal_df
+if __name__ == "__main__":
+    util = Util()
+    df = util.basic()
+    count = len(df)
+
+    df_5m = util.convert_dataframe_from_1m(df, "delim_5m")
+    df_15m = util.convert_dataframe_from_1m(df, "delim_15m")
+    df_30m = util.convert_dataframe_from_1m(df, "delim_30m")
+    df_1h = util.convert_dataframe_from_1m(df, "delim_1h")
+    df_1d = util.convert_dataframe_from_1m(df, "delim_1d")
+    # with Pool(6) as p:
+        # p.map(TestMacd_get_macdsignal, [df,df_5m,df_15m,df_30m,df_1h,df_1d])
+    result_queue = Queue()
+    th1 = Process(target=TestMacd_get_macdsignal,args=(df,))
+    th2 = Process(target=TestMacd_get_macdsignal,args=(df_5m,))
+    th3 = Process(target=TestMacd_get_macdsignal,args=(df_15m,))
+    th4 = Process(target=TestMacd_get_macdsignal,args=(df_30m,))
+    th5 = Process(target=TestMacd_get_macdsignal,args=(df_1h,))
+    th6 = Process(target=TestMacd_get_macdsignal,args=(df_1d,))
+    start = datetime.now()
+    th1.start()
+    th2.start()
+    th3.start()
+    th4.start()
+    th5.start()
+    th6.start()
+    th1.join()
+    th2.join()
+    th3.join()
+    th4.join()
+    th5.join()
+    th6.join()
+    # result_queue.put('STOP')
+    # total = 0
+    # while True:
+    #     tmp = result_queue.get()
+    #     if tmp == 'STOP':
+    #         break
+    #     else:
+    #         total += tmp
+
+    end = datetime.now()
+    diff = (end - start).total_seconds()
+    speed = count / diff
+    print("[ macd ] python")
+    print(f"elapsed time : {diff: 12.2f} s")
+    print(f"speed        : {speed: 12.2f}")
+    print()
+    print()
