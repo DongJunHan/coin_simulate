@@ -3,11 +3,8 @@
 """
 # import pyupbit
 import numpy
-import decimal
 import os
 import os.path
-import webbrowser
-import numpy as np
 import pandas
 import json
 import math
