@@ -28,5 +28,7 @@ Index<br>
 2. `python3 -m unittest simulation.TestMacd.test_example`
 
 ## Result
+1. C라이브러리를 사용한 macd signal지표 구하는 시간은 0.23초.
 ![C](c_cProfile.png)
+2. python의 pandas DataFrame을 사용한 macd signal지표 구하는 시간은 총 10초.
 ![Python](python_cProfile.png)
