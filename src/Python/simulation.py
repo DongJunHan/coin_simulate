@@ -11,7 +11,7 @@ import math
 import platform
 from datetime import datetime, timedelta
 import unittest
-from multiprocessing import Process, Queue, Pool
+from multiprocessing import Process, Queue, Pool, set_start_method
 
 # profile
 enable_profile = True
@@ -31,6 +31,19 @@ def profile(sort_args=['cumulative'], print_args=[10]):
             return result
         return inner
     return decorator
+
+def profile_for_multuprocess(f):
+    profiler = Profile()
+    def inner(*args, **kwargs):
+        result = None
+        try:
+            result = profiler.runcall(f, *args, **kwargs)
+        finally:
+            stats = pstats.Stats(profiler)
+            stats.strip_dirs().sort_stats('cumulative').print_stats(10)
+        return result
+    return inner
+    
 # def profile_print():
 #     if enable_profile == True:
 #         stats = Stats(profiler)
@@ -641,7 +654,13 @@ class BollingerBand():
                bollinger_lbb[lbbKey] = float(lbbData)
         return ubb,lbb,bollinger_ubb,bollinger_lbb
 class TestMacd(unittest.TestCase):
-
+    def __init__(self):
+        self.util = None
+        self.df = None
+    
+    def prepare(self):
+        self.util = Util()
+        self.df = self.util.basic() 
     # @profile()
     def TestMacd_get_macdsignal(self, df:pandas.DataFrame):
         macd = Macd()
@@ -649,19 +668,66 @@ class TestMacd(unittest.TestCase):
         macd_df, macd_dict = macd.get_macd(df)
         signal_df, signal_dict = macd.get_macd_signal(macd_df)
         return signal_df, signal_dict
-    def test_example(self):
-        util = Util()
-        df = util.basic()
-        count = len(df)
+    def test_multiprocess(self):
+        count = len(self.df)
+        df_5m = self.util.convert_dataframe_from_1m(self.df, "delim_5m")
+        df_15m = self.util.convert_dataframe_from_1m(self.df, "delim_15m")
+        df_30m = self.util.convert_dataframe_from_1m(self.df, "delim_30m")
+        df_1h = self.util.convert_dataframe_from_1m(self.df, "delim_1h")
+        df_1d = self.util.convert_dataframe_from_1m(self.df, "delim_1d")
+        result_queue = Queue()
+        th1 = Process(target=self.TestMacd_get_macdsignal,args=(self.df,))
+        th2 = Process(target=self.TestMacd_get_macdsignal,args=(df_5m,))
+        th3 = Process(target=self.TestMacd_get_macdsignal,args=(df_15m,))
+        th4 = Process(target=self.TestMacd_get_macdsignal,args=(df_30m,))
+        th5 = Process(target=self.TestMacd_get_macdsignal,args=(df_1h,))
+        th6 = Process(target=self.TestMacd_get_macdsignal,args=(df_1d,))
+        # import os
+        # os.fork()
+        pr = Profile()
+        pr.enable()
+        start = datetime.now()
+        th1.run()
+        th2.run()
+        th3.run()
+        th4.run()
+        th5.run()
+        th6.run()
+        # th1.join()
+        # th2.join()
+        # th3.join()
+        # th4.join()
+        # th5.join()
+        # th6.join()
 
-        df_5m = util.convert_dataframe_from_1m(df, "delim_5m")
-        df_15m = util.convert_dataframe_from_1m(df, "delim_15m")
-        df_30m = util.convert_dataframe_from_1m(df, "delim_30m")
-        df_1h = util.convert_dataframe_from_1m(df, "delim_1h")
-        df_1d = util.convert_dataframe_from_1m(df, "delim_1d")
+        pr.disable()
+        end = datetime.now()
+        pr.dump_stats('multi.prof')
+        import sys
+        with open( 'multi.txt', 'w') as output_file:
+            sys.stdout = output_file
+            pr.print_stats( sort='time' )
+            sys.stdout = sys.__stdout__
+        diff = (end - start).total_seconds()
+        speed = count / diff
+        print("[ macd ] python multi")
+        print(f"elapsed time : {diff: 12.2f} s")
+        print(f"speed        : {speed: 12.2f}")
+        print()
+        print()
+
+    def test_example(self):
+        count = len(self.df)
+        pr = Profile()
+        df_5m = self.util.convert_dataframe_from_1m(self.df, "delim_5m")
+        df_15m = self.util.convert_dataframe_from_1m(self.df, "delim_15m")
+        df_30m = self.util.convert_dataframe_from_1m(self.df, "delim_30m")
+        df_1h = self.util.convert_dataframe_from_1m(self.df, "delim_1h")
+        df_1d = self.util.convert_dataframe_from_1m(self.df, "delim_1d")
+        pr.enable()
         start = datetime.now()
         #1m
-        self.TestMacd_get_macdsignal(df)
+        self.TestMacd_get_macdsignal(self.df)
         #5m
         self.TestMacd_get_macdsignal(df_5m)
         #15m
@@ -672,9 +738,15 @@ class TestMacd(unittest.TestCase):
         self.TestMacd_get_macdsignal(df_1h)
         #1d
         self.TestMacd_get_macdsignal(df_1d)
-
+        pr.disable()
 
         end = datetime.now()
+        pr.dump_stats('single.prof')
+        import sys
+        with open( 'single.txt', 'w') as output_file:
+            sys.stdout = output_file
+            pr.print_stats( sort='time' )
+            sys.stdout = sys.__stdout__
         diff = (end - start).total_seconds()
         speed = count / diff
         print("[ macd ] python")
@@ -684,58 +756,16 @@ class TestMacd(unittest.TestCase):
         print()
 
 
-def TestMacd_get_macdsignal(df:pandas.DataFrame):
+def macdsignal(df:pandas.DataFrame):
     macd = Macd()
     #1m
     macd_df, macd_dict = macd.get_macd(df)
     signal_df, signal_dict = macd.get_macd_signal(macd_df)
     return signal_df
+
+
 if __name__ == "__main__":
-    util = Util()
-    df = util.basic()
-    count = len(df)
-
-    df_5m = util.convert_dataframe_from_1m(df, "delim_5m")
-    df_15m = util.convert_dataframe_from_1m(df, "delim_15m")
-    df_30m = util.convert_dataframe_from_1m(df, "delim_30m")
-    df_1h = util.convert_dataframe_from_1m(df, "delim_1h")
-    df_1d = util.convert_dataframe_from_1m(df, "delim_1d")
-    # with Pool(6) as p:
-        # p.map(TestMacd_get_macdsignal, [df,df_5m,df_15m,df_30m,df_1h,df_1d])
-    result_queue = Queue()
-    th1 = Process(target=TestMacd_get_macdsignal,args=(df,))
-    th2 = Process(target=TestMacd_get_macdsignal,args=(df_5m,))
-    th3 = Process(target=TestMacd_get_macdsignal,args=(df_15m,))
-    th4 = Process(target=TestMacd_get_macdsignal,args=(df_30m,))
-    th5 = Process(target=TestMacd_get_macdsignal,args=(df_1h,))
-    th6 = Process(target=TestMacd_get_macdsignal,args=(df_1d,))
-    start = datetime.now()
-    th1.start()
-    th2.start()
-    th3.start()
-    th4.start()
-    th5.start()
-    th6.start()
-    th1.join()
-    th2.join()
-    th3.join()
-    th4.join()
-    th5.join()
-    th6.join()
-    # result_queue.put('STOP')
-    # total = 0
-    # while True:
-    #     tmp = result_queue.get()
-    #     if tmp == 'STOP':
-    #         break
-    #     else:
-    #         total += tmp
-
-    end = datetime.now()
-    diff = (end - start).total_seconds()
-    speed = count / diff
-    print("[ macd ] python")
-    print(f"elapsed time : {diff: 12.2f} s")
-    print(f"speed        : {speed: 12.2f}")
-    print()
-    print()
+    test = TestMacd()
+    test.prepare()
+    # test.test_example()
+    test.test_multiprocess()
