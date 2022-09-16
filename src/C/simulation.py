@@ -556,8 +556,8 @@ def profile(sort_args=['cumulative'], print_args=[10]):
             return result
         return inner
     return decorator
-class TestMacd(unittest.TestCase):
-    @profile()
+class TestMacd():
+    # @profile()
     def TestMacd_get_macdsignal(self, cal: Calulator, df: pandas.DataFrame, result_column: str, close: str, delim: str, count: int, fast : int, slow: int, signal: int):
         df[result_column] = cal.get_macd_signal(
                 df[close],
@@ -800,73 +800,64 @@ class TestMacd(unittest.TestCase):
         fast   =  7
         slow   = 80
         signal =  7
-        self.TestMacd_get_macdsignal(cal, df, "macd_signal_1m", "close_1m", "delim_1m", count, fast, slow, signal)
-        self.TestMacd_get_macdsignal(cal, df, "macd_signal_5m", "close_5m", "delim_5m", count, fast, slow, signal)
-        self.TestMacd_get_macdsignal(cal, df, "macd_signal_15m", "close_15m", "delim_15m", count, fast, slow, signal)
-        self.TestMacd_get_macdsignal(cal, df, "macd_signal_30m", "close_30m", "delim_30m", count, fast, slow, signal)
-        self.TestMacd_get_macdsignal(cal, df, "macd_signal_1h", "close_1h", "delim_1h", count, fast, slow, signal)
-        self.TestMacd_get_macdsignal(cal, df, "macd_signal_1d", "close_1d", "delim_1d", count, fast, slow, signal)
-        # df['macd_signal_1m'] = cal.get_macd_signal(
-        #         df['close_1m'],
-        #         df['delim_1m'],
-        #         count, fast, slow, signal)
+        df['macd_signal_1m'] = cal.get_macd_signal(
+                df['close_1m'],
+                df['delim_1m'],
+                count, fast, slow, signal)
         # df['macd_signal_1m_r'] = cal.get_macd_signal_realtime(
         #         df['close_1m'],
         #         df['close_1m_r'],
         #         df['delim_1m'],
         #         count, fast, slow, signal)
 
-        # df['macd_signal_5m'] = cal.get_macd_signal(
-        #         df['close_5m'],
-        #         df['delim_5m'],
-        #         count, fast, slow, signal)
+        df['macd_signal_5m'] = cal.get_macd_signal(
+                df['close_5m'],
+                df['delim_5m'],
+                count, fast, slow, signal)
         # df['macd_signal_5m_r'] = cal.get_macd_signal_realtime(
         #         df['close_5m'],
         #         df['close_5m_r'],
         #         df['delim_5m'],
         #         count, fast, slow, signal)
 
-        # df['macd_signal_15m'] = cal.get_macd_signal(
-        #         df['close_15m'],
-        #         df['delim_15m'],
-        #         count, fast, slow, signal)
+        df['macd_signal_15m'] = cal.get_macd_signal(
+                df['close_15m'],
+                df['delim_15m'],
+                count, fast, slow, signal)
         # df['macd_signal_15m_r'] = cal.get_macd_signal_realtime(
         #         df['close_15m'],
         #         df['close_15m_r'],
         #         df['delim_15m'],
         #         count, fast, slow, signal)
 
-        # df['macd_signal_30m'] = cal.get_macd_signal(
-        #         df['close_30m'],
-        #         df['delim_30m'],
-        #         count, fast, slow, signal)
+        df['macd_signal_30m'] = cal.get_macd_signal(
+                df['close_30m'],
+                df['delim_30m'],
+                count, fast, slow, signal)
         # df['macd_signal_30m_r'] = cal.get_macd_signal_realtime(
         #         df['close_30m'],
         #         df['close_30m_r'],
         #         df['delim_30m'],
         #         count, fast, slow, signal)
 
-        # df['macd_signal_1h'] = cal.get_macd_signal(
-        #         df['close_1h'],
-        #         df['delim_1h'],
-        #         count, fast, slow, signal)
+        df['macd_signal_1h'] = cal.get_macd_signal(
+                df['close_1h'],
+                df['delim_1h'],
+                count, fast, slow, signal)
         # df['macd_signal_1h_r'] = cal.get_macd_signal_realtime(
         #         df['close_1h'],
         #         df['close_1h_r'],
         #         df['delim_1h'],
         #         count, fast, slow, signal)
 
-        eend = datetime.now()
+        fast_1d   =  7
+        slow_1d   = 80
+        signal_1d =  7
 
-
-        # fast_1d   =  7
-        # slow_1d   = 80
-        # signal_1d =  7
-
-        # df['macd_signal_1d'] = cal.get_macd_signal(
-        #         df['close_1d'],
-        #         df['delim_1d'],
-        #         count, fast_1d, slow_1d, signal_1d)
+        df['macd_signal_1d'] = cal.get_macd_signal(
+                df['close_1d'],
+                df['delim_1d'],
+                count, fast_1d, slow_1d, signal_1d)
         # df['macd_signal_1d_r'] = cal.get_macd_signal_realtime(
         #         df['close_1d'],
         #         df['close_1d_r'],
@@ -885,7 +876,7 @@ class TestMacd(unittest.TestCase):
 
 
         end = datetime.now()
-        diff = (eend - start).total_seconds()
+        diff = (end - start).total_seconds()
         speed = count / diff
         print("[ macd signal c ]")
         print(f"elapsed time : {diff: 12.2f} s")
@@ -930,5 +921,7 @@ class TestMacd(unittest.TestCase):
 
 
 
-
+if __name__ == "__main__":
+    test = TestMacd()
+    test.test_example()
 
